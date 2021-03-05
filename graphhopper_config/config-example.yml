@@ -47,7 +47,7 @@ graphhopper:
   profiles:
     - name: bike
       vehicle: bike
-      weighting: fastest
+      weighting: shortest 
 
   #  - name: car_with_turn_costs
   #    vehicle: car

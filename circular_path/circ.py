@@ -166,7 +166,7 @@ def optimize_points(gh, center, radius, best_points):
 if __name__ == "__main__":
     gh = routingpy.Graphhopper(base_url="http://localhost:8989")
     center = [9.30619239807129, 48.74161597751605]  # ES
-    radius = 10  # km
+    radius = 20  # km
     n_points = 30
 
     # evenly distributed angles around the circle
@@ -183,4 +183,4 @@ if __name__ == "__main__":
 
     path = get_path_from_points(gh, best_points)
     # show_path(path, best_points)
-    write_gpx("out10.gpx", path)
+    write_gpx(f"out{radius}.gpx", path)
