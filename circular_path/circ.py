@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 # Idea:
 #   From a central point, sample points within a circle and plan a route along
 #   them. Evaluate roundness and change points until good.
-GENERATIONS = 20
+GENERATIONS = 50
 
 
 def show_path(path, points):
@@ -64,11 +64,15 @@ def get_points_from_radiants(center: np.ndarray, radius: float,
 
 def mutate_radiants(noise: float, radiants: np.ndarray) -> np.ndarray:
     rnd = np.random.normal(0, scale=noise, size=radiants.shape)
+    keep = np.random.random(size=radiants.shape)
+    rnd[np.where(keep < .8)] = 0
     return radiants + rnd
 
 
 def mutate_points(noise: float, points: np.ndarray) -> np.ndarray:
     rnd = np.random.normal(0, scale=noise, size=points.shape)
+    keep = np.random.random(size=points.shape[0])
+    rnd[np.where(keep < .8)] = 0
     return points + rnd
 
 
@@ -122,12 +126,12 @@ def optimize_radiants(gh, center, radius, best_radiants):
             best_radiants = radiantss[min_i]
         else:
             print(f'no new best cost. old: {best_cost}, new: {costs[min_i]}')
-        noise = .8 * noise
+        noise = .95 * noise
     return best_radiants
 
 
 def optimize_points(gh, center, radius, best_points):
-    noise = .05 * radius * 2 * math.pi / len(best_points)
+    noise = .1 * radius * 2 * math.pi / len(best_points)
     n_generations = 2*GENERATIONS
     n_samples = 30
     best_cost = eval_points(gh, center, radius, best_points)
@@ -149,7 +153,7 @@ def optimize_points(gh, center, radius, best_points):
             best_points = pointss[min_i]
         else:
             print(f'no new best cost. old: {best_cost}, new: {costs[min_i]}')
-        noise = .7 * noise
+        noise = .95 * noise
     return best_points
 
 
@@ -157,7 +161,7 @@ if __name__ == "__main__":
     gh = routingpy.Graphhopper(base_url="http://localhost:8989")
     center = [9.30619239807129, 48.74161597751605]  # ES
     radius = 0.05
-    n_points = 50
+    n_points = 30
 
     # radiants around this center
     radiants = np.linspace(0, 2*math.pi, n_points-1, endpoint=False)
