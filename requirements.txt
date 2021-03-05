@@ -2,3 +2,4 @@ routingpy
 numpy
 matplotlib
 gpxpy
+geopy

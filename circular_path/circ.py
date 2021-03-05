@@ -4,12 +4,14 @@ import math
 import gpxpy
 import numpy as np
 import routingpy
+from geopy import Point
+from geopy.distance import geodesic
 from matplotlib import pyplot as plt
 
 # Idea:
 #   From a central point, sample points within a circle and plan a route along
 #   them. Evaluate roundness and change points until good.
-GENERATIONS = 50
+GENERATIONS = 20
 
 
 def show_path(path, points):
@@ -44,9 +46,11 @@ def measure_roundness_error(center: np.ndarray, radius: float,
     # around `center`. The higher, the worse
     error: float = 0
     for point in points:
-        error += math.pow(np.linalg.norm(center - point) - radius, 2)
-        # TODO: distance with https://towardsdatascience.com/calculating-\
-        # distance-between-two-geolocations-in-python-26ad3afe287b
+        dist = geodesic(
+            (center[1], center[0]),
+            (point[1], point[0])
+        ).km
+        error += math.pow(dist - radius, 2)
     return error
 
 
@@ -55,11 +59,13 @@ def get_points_from_radiants(center: np.ndarray, radius: float,
     # using `radiants`, project point in `radius` around `center`
     # adding beginning at the end for full circle
     radiants_with_end = np.append(radiants, radiants[0])
-    return np.array(list(map(
+    points = np.array(list(map(
         lambda x: list(
-            center + np.array([math.cos(x) * radius, math.sin(x) * radius])
+            geodesic(kilometers=radius).destination(
+                Point(center[1], center[0]), math.degrees(x))
         ),
         radiants_with_end)))
+    return points[:, [1, 0]]
 
 
 def mutate_radiants(noise: float, radiants: np.ndarray) -> np.ndarray:
@@ -131,7 +137,7 @@ def optimize_radiants(gh, center, radius, best_radiants):
 
 
 def optimize_points(gh, center, radius, best_points):
-    noise = .1 * radius * 2 * math.pi / len(best_points)
+    noise = .001 * radius * 2 * math.pi / len(best_points)
     n_generations = 2*GENERATIONS
     n_samples = 30
     best_cost = eval_points(gh, center, radius, best_points)
@@ -160,18 +166,21 @@ def optimize_points(gh, center, radius, best_points):
 if __name__ == "__main__":
     gh = routingpy.Graphhopper(base_url="http://localhost:8989")
     center = [9.30619239807129, 48.74161597751605]  # ES
-    radius = 0.05
+    radius = 10  # km
     n_points = 30
 
-    # radiants around this center
+    # evenly distributed angles around the circle
     radiants = np.linspace(0, 2*math.pi, n_points-1, endpoint=False)
 
+    # firstly optimize the angle to get a route as circular as possible
     best_radiants = optimize_radiants(
         gh, center, radius, radiants)
     points = get_points_from_radiants(center, radius, best_radiants)
+    # then optimize the points themselves to shorten the route and get rid of
+    # points that are dead ends in the route
     best_points = optimize_points(
         gh, center, radius, points)
 
     path = get_path_from_points(gh, best_points)
     # show_path(path, best_points)
-    write_gpx("out.gpx", path)
+    write_gpx("out10.gpx", path)
