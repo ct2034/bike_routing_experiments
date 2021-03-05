@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import math
 
+import gpxpy
 import numpy as np
 import routingpy
 from matplotlib import pyplot as plt
@@ -8,6 +9,7 @@ from matplotlib import pyplot as plt
 # Idea:
 #   From a central point, sample points within a circle and plan a route along
 #   them. Evaluate roundness and change points until good.
+GENERATIONS = 20
 
 
 def show_path(path, points):
@@ -17,6 +19,19 @@ def show_path(path, points):
     plt.plot(points[:, 0], points[:, 1], 'r.')
     ax.set_aspect('equal')
     plt.show()
+
+
+def write_gpx(fname: str, points: np.ndarray):
+    gpx = gpxpy.gpx.GPX()
+    gpx_track = gpxpy.gpx.GPXTrack()
+    gpx.tracks.append(gpx_track)
+    gpx_segment = gpxpy.gpx.GPXTrackSegment()
+    gpx_track.segments.append(gpx_segment)
+    for p in points:
+        gpx_segment.points.append(
+            gpxpy.gpx.GPXTrackPoint(p[1], p[0]))
+    with open(fname, 'w') as f:
+        f.write(gpx.to_xml())
 
 
 def get_len_in_km(dir) -> float:
@@ -86,7 +101,7 @@ def eval_radiants(gh, center: np.ndarray, radius: float,
 
 def optimize_radiants(gh, center, radius, best_radiants):
     noise = math.pi / len(best_radiants)
-    n_generations = 10
+    n_generations = GENERATIONS
     n_samples = 20
     best_cost = eval_radiants(gh, center, radius, best_radiants)
     print(f'initial_cost: {best_cost}')
@@ -113,7 +128,7 @@ def optimize_radiants(gh, center, radius, best_radiants):
 
 def optimize_points(gh, center, radius, best_points):
     noise = .05 * radius * 2 * math.pi / len(best_points)
-    n_generations = 20
+    n_generations = 2*GENERATIONS
     n_samples = 30
     best_cost = eval_points(gh, center, radius, best_points)
     print(f'initial_cost: {best_cost}')
@@ -154,5 +169,5 @@ if __name__ == "__main__":
         gh, center, radius, points)
 
     path = get_path_from_points(gh, best_points)
-    # print(f'lenght (km): {get_len_in_km(dir)}')
-    show_path(path, best_points)
+    # show_path(path, best_points)
+    write_gpx("out.gpx", path)
